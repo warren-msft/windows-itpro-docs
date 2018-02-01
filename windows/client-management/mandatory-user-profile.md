@@ -1,4 +1,4 @@
----
+, ---
 title: Create mandatory user profiles (Windows 10)
 description: A mandatory user profile is a special type of pre-configured roaming user profile that administrators can use to specify settings for users.
 keywords: [".man","ntuser"]
@@ -15,17 +15,19 @@ ms.date: 10/16/2017
 
 **Applies to**
 
--   Windows 10
+-   Windows 10, Windows Server 2016
 
 
 
-A mandatory user profile is a roaming user profile that has been pre-configured by an administrator to specify settings for users. Settings commonly defined in a mandatory profile include (but are not limited to): icons that appear on the desktop, desktop backgrounds, user preferences in Control Panel, printer selections, and more. Configuration changes made during a user's session that are normally saved to a roaming user profile are not saved when a mandatory user profile is assigned. 
+A mandatory user profile (MUP) is a roaming user profile that has been pre-configured by an administrator to specify settings for users. Settings commonly defined in a mandatory profile include (but are not limited to): icons that appear on the desktop, desktop backgrounds, user preferences in Control Panel, printer selections, and more. Configuration changes made during a user's session that are normally saved to a roaming user profile are not saved when a mandatory user profile is assigned. 
 
 Mandatory user profiles are useful when standardization is important, such as on a kiosk device or in educational settings. Only system administrators can make changes to mandatory user profiles. 
 
 When the server that stores the mandatory profile is unavailable, such as when the user is not connected to the corporate network, users with mandatory profiles can sign in with the locally cached copy of the mandatory profile, if one exists. Otherwise, the user will be signed in with a temporary profile. 
 
-User profiles become mandatory profiles when the administrator renames the NTuser.dat file (the registry hive) of each user's profile in the file system of the profile server from `NTuser.dat` to `NTuser.man`. The `.man` extension causes the user profile to be a read-only profile.
+User profiles become mandatory profiles when the administrator renames the NTuser.dat file (the registry hive)  in the file system portion of the profile stored on the file server from `NTuser.dat` to `NTuser.man`. The `.man` extension causes the user profile to be a read-only profile.
+
+It is technically possible to change any profile to a mandatory profile by changing the extension to .man, the most common deployment is to create a centralized MUP that all users profiles are loaded from. 
 
 <span id="extension"/>
 ## Profile extension for each Windows version
@@ -39,20 +41,18 @@ The name of the folder in which you store the mandatory profile must use the cor
 | Windows 8 | Windows Server 2012 | v3 |
 | Windows 8.1 | Windows Server 2012 R2 | v4 |
 | Windows 10, versions 1507 and 1511 | N/A | v5 |
-| Windows 10, version 1607 (Anniversary Update) and version 1703 (Creators Update) |  Windows Server 2016 | v6 |
+| Windows 10, version 1607 (Anniversary Update) and version 1703 (Creators Update) and Windows 10 version 1709 |  Windows Server 2016 | v6 |
 
 For more information, see [Deploy Roaming User Profiles, Appendix B](https://technet.microsoft.com/library/jj649079.aspx) and [Roaming user profiles versioning in Windows 10 and Windows Server Technical Preview](https://support.microsoft.com/kb/3056198).
 
 ## How to create a mandatory user profile
 
-First, you create a default user profile with the customizations that you want, run Sysprep with CopyProfile set to **True** in the answer file, copy the customized default user profile to a network share, and then you rename the profile to make it mandatory.
+Creating a Mandatory User Profile (MUP) is a multistep process. You will need to create a customized version of the Default User profile on reference system that is the same OS version that the users of the MUP will use.  The MUP creation process use “Sysprep copyprofile” and the Advanced System Settings Control Panel app to copy the customized Default User profile to a network share and then configure the User Accounts to consume the Mandatory Profile. You must also grant the users who will be assigned the MUP permissions to load and change the MUP.
 
 **To create a default user profile**
 
-1. Sign in to a computer running Windows 10 as a member of the local Administrator group. Do not use a domain account.
+1. 1.	Pick a PC to use to create your MUP.  This PC should be a PC that is not needed for production, is in a workgroup and unning the version of Windows that the users of the MUP will use. Sign in to the computer running Windows 10 as a member of the local Administrator group.
 
-   > [!NOTE] 
-   > Use a lab or extra computer running a clean installation of Windows 10 to create a default user profile. Do not use a computer that is required for business (that is, a production computer). This process removes all domain accounts from the computer, including user profile folders. 
  
 2. Configure the computer settings that you want to include in the user profile. For example, you can configure settings for the desktop background, uninstall default apps, install line-of-business apps, and so on. 
 
@@ -60,25 +60,16 @@ First, you create a default user profile with the customizations that you want, 
    >Unlike previous versions of Windows, you cannot apply a Start and taskbar layout using a mandatory profile. For alternative methods for customizing the Start menu and taskbar, see [Related topics](#related-topics).
 
 3. [Create an answer file (Unattend.xml)](https://msdn.microsoft.com/library/windows/hardware/dn915085.aspx) that sets the [CopyProfile](https://msdn.microsoft.com/library/windows/hardware/dn922656.aspx) parameter to **True**. The CopyProfile parameter causes Sysprep to copy the currently signed-on user’s profile folder to the default user profile. You can use [Windows System Image Manager](https://msdn.microsoft.com/library/windows/hardware/dn922445.aspx), which is part of the Windows Assessment and Deployment Kit (ADK) to create the Unattend.xml file. 
- 
-3. For devices running Windows 10, use the [Remove-AppxProvisionedPackage](https://technet.microsoft.com/library/dn376476%28v=wps.620%29.aspx) cmdlet in Windows PowerShell to uninstall the following applications: 
- 
-     - Microsoft.windowscommunicationsapps_8wekyb3d8bbwe
-     - Microsoft.BingWeather_8wekyb3d8bbwe
-     - Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
-     - Microsoft.Getstarted_8wekyb3d8bbwe
-     - Microsoft.Windows.Photos_8wekyb3d8bbwe
-     - Microsoft.WindowsCamera_8wekyb3d8bbwe
-     - Microsoft.WindowsFeedbackHub_8wekyb3d8bbwe
-     - Microsoft.WindowsStore_8wekyb3d8bbwe
-     - Microsoft.XboxApp_8wekyb3d8bbwe
-     - Microsoft.XboxIdentityProvider_8wekyb3d8bbwe
-     - Microsoft.ZuneMusic_8wekyb3d8bbwe 
-     
-     >[!NOTE]
-     >Uninstalling these apps will decrease sign-in time. If your deployment needs any of these apps, you can leave them installed.
 
-3. At a command prompt, type the following command and press **ENTER**.
+See this page for more details on how to create an unattended.xml answer file. https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/customize-the-default-user-profile-by-using-copyprofile
+ 
+4 . Uninstall any application you do not need or want from the PC. For examples on how to uninstall Windows 10 Application see Remove-AppxProvisionedPackage 
+For a list of uninstallable application see this page https://docs.microsoft.com/en-us/windows/application-management/apps-in-windows-10
+
+     >[!NOTE]
+    It is highly recommended to uninstall unwanted or unneeded apps as it will speed up user logon times.
+
+5. At a command prompt, type the following command and press **ENTER**.
 
     `sysprep /oobe /reboot /generalize /unattend:unattend.xml` 
 
@@ -91,39 +82,42 @@ First, you create a default user profile with the customizations that you want, 
     
     >Use the [Remove-AppxProvisionedPackage](https://technet.microsoft.com/library/dn376476%28v=wps.620%29.aspx) cmdlet in Windows PowerShell to uninstall the app that is listed in the log.
   
-5. The sysprep process reboots the PC and starts at the first-run experience screen. Complete the set up, and then sign in to the computer using an account that has local administrator privileges.
+6. The sysprep process reboots the PC and starts at the first-run experience screen. Complete the set up, and then sign in to the computer using an account that has local administrator privileges.
 
-6. Right-click Start, go to **Control Panel** (view by large or small icons) > **System** > **Advanced system settings**, and click **Settings** in the **User Profiles** section.
+7. Right-click Start, go to **Control Panel** (view by large or small icons) > **System** > **Advanced system settings**, and click **Settings** in the **User Profiles** section. 
     
-7. In **User Profiles**, click **Default Profile**, and then click **Copy To**.
+8. In **User Profiles**, click **Default Profile**, and then click **Copy To**.
 
    ![Example of UI](images/copy-to.png)
 
-8. In **Copy To**, under **Permitted to use**, click **Change**.
+9. In **Copy To**, under **Permitted to use**, click **Change**.
 
    ![Example of UI](images/copy-to-change.png)
    
-9. In **Select User or Group**, in the **Enter the object name to select** field, type `everyone`, click **Check Names**, and then click **OK**.
+10. In **Select User or Group**, in the **Enter the object name to select** field, type `everyone`, click **Check Names**, and then click **OK**.
 
-10. In **Copy To**, in the **Copy profile to** field, enter the path and folder name where you want to store the mandatory profile. The folder name must use the correct [extension](#extension) for the operating system version. For example, the folder name must end with “.v6” to identify it as a user profile folder for Windows 10, version 1607.
+11. In **Copy To**, in the **Copy profile to** field, enter the path and folder name where you want to store the mandatory profile. The folder name must use the correct [extension](#extension) for the operating system version. For example, the folder name must end with “.v6” to identify it as a user profile folder for Windows 10, version 1607.
 
    - If the device is joined to the domain and you are signed in with an account that has permissions to write to a shared folder on the network, you can enter the shared folder path.
    - If the device is not joined to the domain, you can save the profile locally and then copy it to the shared folder location.  
    
    ![Example of UI](images/copy-to-path.png) 
+   
+NOTE: Starting in Windows 10 build 1703 a Mandatory Profile check box was added to the Copy To window. If you are creating one centralized MUP do Not use the new check box as it will result in a broken MUP
 
-9. Click **OK** to copy the default user profile.
+<Insert Image Here>
 
+12. Click **OK** to copy the default user profile.
 
 **To make the user profile mandatory**
 
  
-3. In File Explorer, open the folder where you stored the copy of the profile.
+1. In File Explorer, open the folder where you stored the copy of the profile.
 
     >[!NOTE]
     >If the folder is not displayed, click **View** > **Options** > **Change folder and search options**. On the **View** tab, select **Show hidden files and folders**, clear **Hide protected operating system files**, click **Yes** to confirm that you want to show operating system files, and then click **OK** to save your changes.
 
-1. Rename `Ntuser.dat` to `Ntuser.man`. 
+2. Rename `Ntuser.dat` to `Ntuser.man`. 
 
 ## How to apply a mandatory user profile to users
 
